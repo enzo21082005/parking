@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "affichage.h"
+#include <ncurses.h>
 
 void charger_plan(const char *filename,char plan[max_ligne][max_colonne]) {
     FILE *f=fopen(filename, "r");

@@ -1,14 +1,22 @@
-CC=gcc
-CFLAGS=-Wall -Wextra
 
-all: parking
-parking: main.o affichage.o gestion.o
-	$(CC) $(CFLAGS) -o parking main.o affichage.o gestion.o
+CC      := gcc
+CFLAGS  := -Wall -Wextra -std=c11
+LDFLAGS := -lncurses
 
-main.o: main.c affichage.h gestion.h
-affichage.o: affichage.c affichage.h
-gestion.o: gestion.c gestion.h
+SRC     := main.c affichage.c gestion.c
+OBJ     := $(SRC:.c=.o)
+EXEC    := parking
+
+all: $(EXEC)
+
+$(EXEC): $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o parking
-	
+	rm -f $(OBJ) $(EXEC)
+
+.PHONY: all clean
+
