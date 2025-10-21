@@ -47,18 +47,21 @@ void trouver_places(char plan[max_ligne][max_colonne]) {
     for (int i = 0; i < max_ligne && nb_places < NB_PLACES; i++) {
         int len = strlen(plan[i]);
         for (int j = 0; j < len - 2 && nb_places < NB_PLACES; j++) {
-            // Cherche le symbole ■ (qui peut être encodé sur plusieurs octets)
-            if (plan[i][j] == -30 && plan[i][j+1] == -106 && plan[i][j+2] == -96) {
-                places[nb_places].x = i;
-                places[nb_places].y = j;
+            // Cherche le symbole ■ (UTF-8: 0xE2 0x96 0xA0)
+            if ((unsigned char)plan[i][j] == 0xE2 && 
+                (unsigned char)plan[i][j+1] == 0x96 && 
+                (unsigned char)plan[i][j+2] == 0xA0) {
+                
+                // La place est AU-DESSUS du ■ (ligne i-1)
+                places[nb_places].x = i - 1;
+                places[nb_places].y = j + 1;  // Centre du marqueur
                 places[nb_places].libre = 1;
+                places[nb_places].marqueur_x = i;  // Position du marqueur ■
+                places[nb_places].marqueur_y = j;
                 nb_places++;
-                printf("Place trouvée à (%d, %d)\n", i, j); // Debug
             }
         }
     }
-    
-    printf("Total places trouvées: %d\n", nb_places); // Debug
 }
 
 PLACE* trouver_place_libre() {

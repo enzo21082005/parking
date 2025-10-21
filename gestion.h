@@ -20,6 +20,8 @@ struct voiture {
 typedef struct {
     int x, y;
     int libre; // 1 = libre, 0 = occupée
+    int marqueur_x;  // Position X du marqueur
+    int marqueur_y;  // Position Y du marqueur
 } PLACE;
 
 // Coordonnées entrée/sortie
