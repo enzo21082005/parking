@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include "affichage.h"
 #include <ncurses.h>
 

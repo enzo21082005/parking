@@ -1,5 +1,5 @@
-#ifndef AFFICHAGE.H
-#define AFFICHAGE.H
+#ifndef AFFICHAGE_H
+#define AFFICHAGE_H
 #include "gestion.h"
 
 #define max_ligne 100
