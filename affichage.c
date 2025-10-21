@@ -30,9 +30,26 @@ void afficher_titre(const char *filename) {
     sleep(1);
 }
 
-void afficher_plan(char plan[max_ligne][max_colonne], int lignes) {
-    for(int i=0;i<lignes;i++) printf("%s\n",plan[i]);
+void afficher_plan(char plan[max_ligne][max_colonne], VEHICULE* liste, int lignes) {
+    for (int i = 0; i < lignes; i++) {
+        for (int j = 0; j < strlen(plan[i]); j++) {
+            // Vérifie si une voiture est à cette position
+            VEHICULE* tmp = liste;
+            int est_voiture = 0;
+            while (tmp) {
+                if (tmp->posx == i && tmp->posy == j && tmp->etat != 2) {
+                    printf("%c", tmp->Carrosserie[0][0]);
+                    est_voiture = 1;
+                    break;
+                }
+                tmp = tmp->NXT;
+            }
+            if (!est_voiture) printf("%c", plan[i][j]);
+        }
+        printf("\n");
+    }
 }
+
 
 void dessiner_voiture(VEHICULE* v, char plan[max_ligne][max_colonne]) {
     if (!v) return;

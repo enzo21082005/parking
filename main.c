@@ -88,8 +88,7 @@ int main() {
         }
         
         // Dessine toutes les voitures et affiche le plan
-        dessiner_voitures(voitures, plan);
-        afficher_plan(plan, 50);
+        afficher_plan(plan,voitures, 50);
         
         // Pause entre frames
         usleep(150000);

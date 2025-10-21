@@ -25,10 +25,10 @@ typedef struct {
 } PLACE;
 
 // Coordonnées entrée/sortie
-#define ENTREE_X 1
-#define ENTREE_Y 18
-#define SORTIE_X 2
-#define SORTIE_Y 68
+#define ENTREE_X 8
+#define ENTREE_Y 107
+#define SORTIE_X 7
+#define SORTIE_Y 1
 
 // Fonctions voitures
 VEHICULE* creer_voiture(char type, int x, int y);
