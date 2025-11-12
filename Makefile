@@ -1,7 +1,6 @@
-
 CC      := gcc
 CFLAGS  := -Wall -Wextra -std=c11
-LDFLAGS := -lncurses
+LDFLAGS := -lncursesw
 
 SRC     := main.c affichage.c gestion.c
 OBJ     := $(SRC:.c=.o)
@@ -19,4 +18,3 @@ clean:
 	rm -f $(OBJ) $(EXEC)
 
 .PHONY: all clean
-
