@@ -21,15 +21,16 @@ typedef struct {
     int libre;
 } PLACE;
 
-#define ENTREE_X 1
-#define ENTREE_Y 18
-#define SORTIE_X 2
-#define SORTIE_Y 68
+#define ENTREE_X 8
+#define ENTREE_Y 112
+#define SORTIE_X 8
+#define SORTIE_Y 12
 
 VEHICULE* creer_voiture(char type, int x, int y);
 void ajouter_voiture(VEHICULE** liste, VEHICULE* v);
 void trouver_places(char plan[max_ligne][max_colonne]);
 PLACE* trouver_place_libre();
-void deplacer_voiture_vers(VEHICULE* v, PLACE* target);
+int est_un_espace(int x, int y, char plan[max_ligne][max_colonne]);
+void deplacer_voiture_vers(VEHICULE* v, PLACE* target, char plan[max_ligne][max_colonne]);
 
 #endif

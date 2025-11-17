@@ -11,21 +11,85 @@
 // =======================================
 // Chargement du plan depuis un fichier
 // =======================================
-void charger_plan(const char *filename, char plan[max_ligne][max_colonne]) {
+void charger_plan(const char *filename, wchar_t plan[max_ligne][max_colonne]) {
     FILE *f = fopen(filename, "r");
-    if (!f) { perror("Erreur ouverture fichier"); return; }
-
-    int i = 0;
-    while (i < max_ligne && fgets(plan[i], max_colonne, f)) {
-        plan[i][strcspn(plan[i], "\n")] = '\0';
-        i++;
+    if (!f) { 
+        perror("Erreur ouverture fichier"); 
+        return; 
     }
+
+    // Important : définir le mode wide pour lire des wchar_t
+    fwide(f, 1);
+
+    int x = 0, y = 0;
+    wint_t c;
+    
+    // Initialiser toutes les lignes
+    for (int i = 0; i < max_ligne; i++) {
+        plan[i][0] = L'\0';
+    }
+    
+    // Lire caractère par caractère (wide char)
+    while ((c = fgetwc(f)) != WEOF && y < max_ligne) {
+        if (c == L'\n') {
+            // Fin de ligne : terminer la ligne actuelle
+            plan[y][x] = L'\0';
+            y++;  // Passer à la ligne suivante
+            x = 0; // Remettre la colonne à 0
+        } 
+        else if (c == L'\r') {
+            // Ignorer les retours chariot (Windows)
+            continue;
+        }
+        else if (x < max_colonne - 1) {
+            plan[y][x++] = (wchar_t)c;
+        }
+    }
+    
+    // Terminer la dernière ligne si elle existe
+    if (y < max_ligne) {
+        plan[y][x] = L'\0';
+    }
+    
     fclose(f);
 }
 
 // =======================================
-// Affichage du titre ASCII
+// Affichage du plan (VERSION CORRIGÉE)
 // =======================================
+void afficher_plan(wchar_t plan[max_ligne][max_colonne], int lignes) {
+    clear(); // Important : effacer l'écran avant d'afficher
+    
+    for (int i = 0; i < lignes; i++) {
+        // Vérifier que la ligne n'est pas vide
+        if (plan[i][0] == L'\0') {
+            continue; // Sauter les lignes vides
+        }
+        
+        for (int j = 0; plan[i][j] != L'\0' && j < max_colonne; j++) {
+            wchar_t wc = plan[i][j];
+            
+            // Détermine la couleur
+            int pair = 0;
+            if (wc == L'■') {
+                pair = 2; // Rouge pour les places
+            } else if (wc == L'║' || wc == L'═' || wc == L'╔' || wc == L'╗' ||
+                       wc == L'╚' || wc == L'╝' || wc == L'╩' || wc == L'╦' || 
+                       wc == L'╬' || wc == L'►' || wc == L'◄' || wc == L'─' || 
+                       wc == L'│' || wc == L'█') {
+                pair = 1; // Vert pour la structure
+            }
+
+            // Crée et affiche le caractère
+            cchar_t cch;
+            wchar_t wstr[2] = {wc, L'\0'};
+            setcchar(&cch, wstr, A_NORMAL, pair, NULL);
+            mvadd_wch(i, j, &cch);
+        }
+    }
+    refresh();
+}
+
 void afficher_titre(const char *filename) {
     FILE *f = fopen(filename, "r");
     if (!f) { perror("Erreur ouverture titre"); return; }
@@ -41,64 +105,34 @@ void afficher_titre(const char *filename) {
     clear();
 }
 
-// =======================================
-// Affichage du plan avec couleurs ncurses
-// =======================================
-void afficher_plan(char plan[max_ligne][max_colonne], int lignes) {
-    clear();
-    for (int i = 0; i < lignes; i++) {
-        const char *p = plan[i];
-        int j = 0;
-
-        while (*p) {
-            wchar_t wc;
-            int len = mbtowc(&wc, p, MB_CUR_MAX); // UTF-8 -> wchar_t
-            if (len <= 0) { // erreur ou fin
-                break;
-            }
-
-            // Couleur selon type de caractère
-            if (wc == L'■') attron(COLOR_PAIR(2)); // Rouge = occupé
-            else if (wc == L'║' || wc == L'═' || wc == L'╔' || wc == L'╗' ||
-                     wc == L'╚' || wc == L'╝' || wc == L'╩' || wc == L'╦' || wc == L'╬')
-                attron(COLOR_PAIR(1)); // Vert = structure
-
-            move(i, j);
-            
-            // Conversion wchar_t -> cchar_t pour add_wch
-            cchar_t cch;
-            wchar_t wstr[2] = {wc, L'\0'};
-            setcchar(&cch, wstr, A_NORMAL, 0, NULL);
-            add_wch(&cch);
-
-            attroff(COLOR_PAIR(1));
-            attroff(COLOR_PAIR(2));
-
-            p += len;
-            j++;
-        }
-    }
-    refresh();
-}
 
 // =======================================
-// Dessin d'une voiture
+// Dessin d'une voiture (NOUVELLE VERSION)
 // =======================================
-void dessiner_voiture(VEHICULE* v, char plan[max_ligne][max_colonne]) {
+void dessiner_voiture(VEHICULE* v) {
     if (!v) return;
-    if (v->posx >= 0 && v->posx < max_ligne &&
-        v->posy >= 0 && v->posy < (int)strlen(plan[v->posx])) {
-        plan[v->posx][v->posy] = 'O';
-    }
+    
+    // On active la couleur ROUGE (paire 2)
+    attron(COLOR_PAIR(2));
+    
+    // On dessine un "O" directement aux coordonnées de la voiture
+    // mvprintw(ligne, colonne, "texte")
+    // v->posy est le N° de colonne (le N° de caractère), 
+    // c'est exactement ce que ncurses attend.
+    mvprintw(v->posx, v->posy, "O");
+    
+    // On désactive la couleur
+    attroff(COLOR_PAIR(2));
 }
 
 // =======================================
-// Dessin de toutes les voitures
+// Dessin de toutes les voitures (MISE À JOUR)
 // =======================================
-void dessiner_voitures(VEHICULE* liste, char plan[max_ligne][max_colonne]) {
+void dessiner_voitures(VEHICULE* liste) {
     VEHICULE* tmp = liste;
     while (tmp) {
-        dessiner_voiture(tmp, plan);
+        // La fonction ne prend plus le 'plan' en paramètre
+        dessiner_voiture(tmp);
         tmp = tmp->NXT;
     }
 }
