@@ -30,7 +30,11 @@ int main() {
     trouver_places(plan);
 
     int hauteur_plan = 0;
+    int largeur_plan = 0;
     while (hauteur_plan < max_ligne && plan[hauteur_plan][0] != L'\0') {
+        int w = 0;
+        while (plan[hauteur_plan][w] != L'\0') w++;
+        if (w > largeur_plan) largeur_plan = w;
         hauteur_plan++;
     }
 
@@ -53,14 +57,9 @@ int main() {
                 VEHICULE* nouvelle = creer_voiture('v', ENTREE_X, ENTREE_Y);
                 ajouter_voiture(&voitures, nouvelle);
 
-                // Trouver l'index de cette voiture
-                VEHICULE* tmp = voitures;
-                int idx = 0;
-                while (tmp->NXT) {
-                    tmp = tmp->NXT;
-                    idx++;
-                }
-                targets[idx] = target;
+                // L'index de la nouvelle voiture est simplement nb_voitures_actives
+                // (avant de l'incrémenter)
+                targets[nb_voitures_actives] = target;
 
                 nb_voitures_actives++;
                 nb_voitures_creees++;
@@ -90,10 +89,9 @@ int main() {
                 // Garée, décrémenter le temps
                 v->ticks_gare--;
 
-                // Paiement : 1€ toutes les 50 ticks
+                // Compteur de temps : 1€ toutes les 50 ticks
                 if (v->ticks_gare % 50 == 0) {
                     v->argent_du++;
-                    argent_total++;
                 }
 
                 if (v->ticks_gare == 0) {
@@ -109,6 +107,9 @@ int main() {
 
             // Supprimer la voiture si elle est sortie
             if (supprimer) {
+                // Collecter le paiement avant de supprimer la voiture
+                argent_total += v->argent_du;
+
                 if (prev) {
                     prev->NXT = next;
                 } else {
@@ -151,30 +152,22 @@ int main() {
             if (places[i].libre) places_libres++;
         }
 
-        // Affichage des statistiques EN DESSOUS du parking
-        int ligne_info = hauteur_plan + 1;
-        mvprintw(ligne_info, 0, "═══════════════════════════════════════════════════════════════════════════");
-        ligne_info++;
-        mvprintw(ligne_info, 0, "  STATISTIQUES DU PARKING");
-        ligne_info++;
-        mvprintw(ligne_info, 0, "═══════════════════════════════════════════════════════════════════════════");
-        ligne_info++;
-        mvprintw(ligne_info, 0, "  Voitures actives      : %d", count_voitures);
-        ligne_info++;
-        mvprintw(ligne_info, 0, "  Voitures garées       : %d", count_garees);
-        ligne_info++;
-        mvprintw(ligne_info, 0, "  Total entrées         : %d", nb_voitures_creees);
-        ligne_info++;
-        mvprintw(ligne_info, 0, "  Total sorties         : %d", nb_voitures_sorties);
-        ligne_info++;
-        mvprintw(ligne_info, 0, "  Places libres         : %d / %d", places_libres, nb_places);
-        ligne_info++;
-        mvprintw(ligne_info, 0, "  Prochain spawn dans   : %.1f secondes",
+        // Affichage des statistiques À DROITE du parking (version compacte)
+        int col_stats = largeur_plan + 1;  // 1 colonne d'espacement
+        int ligne_stats = 0;
+
+        mvprintw(ligne_stats++, col_stats, "╔══════════════════╗");
+        mvprintw(ligne_stats++, col_stats, "║   STATISTIQUES   ║");
+        mvprintw(ligne_stats++, col_stats, "╠══════════════════╣");
+        mvprintw(ligne_stats++, col_stats, "║ Act.  : %-3d      ║", count_voitures);
+        mvprintw(ligne_stats++, col_stats, "║ Garé  : %-3d      ║", count_garees);
+        mvprintw(ligne_stats++, col_stats, "║ Ent.  : %-3d      ║", nb_voitures_creees);
+        mvprintw(ligne_stats++, col_stats, "║ Sort. : %-3d      ║", nb_voitures_sorties);
+        mvprintw(ligne_stats++, col_stats, "║ Libre : %-2d/%-2d    ║", places_libres, nb_places);
+        mvprintw(ligne_stats++, col_stats, "║ Spawn : %.1fs     ║",
                  (intervalle_spawn - tick_depuis_spawn) * 0.2);
-        ligne_info++;
-        mvprintw(ligne_info, 0, "  Argent gagné          : %d €", argent_total);
-        ligne_info++;
-        mvprintw(ligne_info, 0, "═══════════════════════════════════════════════════════════════════════════");
+        mvprintw(ligne_stats++, col_stats, "║ €     : %-4d     ║", argent_total);
+        mvprintw(ligne_stats++, col_stats, "╚══════════════════╝");
 
         refresh();
 
