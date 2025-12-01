@@ -40,8 +40,9 @@ void ajouter_voiture(VEHICULE** liste, VEHICULE* v);
 void trouver_places(wchar_t plan[max_ligne][max_colonne]);
 PLACE* trouver_place_libre();
 int est_un_espace(int x, int y, wchar_t plan[max_ligne][max_colonne]);
-void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][max_colonne]);
-int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne]);
+int position_occupee(int x, int y, VEHICULE* liste, VEHICULE* ignore);
+void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][max_colonne], VEHICULE* liste);
+int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne], VEHICULE* liste);
 
 #endif
 

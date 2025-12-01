@@ -97,12 +97,10 @@ void afficher_titre(const char *filename) {
     char ligne[300];
     while (fgets(ligne, sizeof(ligne), f)) {
         printw("%s", ligne);
-        refresh();
-        sleep(1); // 40ms comme effet de type "animation"
     }
     fclose(f);
-    sleep(1);
-    clear();
+    refresh();
+    // Affichage instantané du titre
 }
 
 

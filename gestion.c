@@ -105,6 +105,19 @@ int est_accessible(int x, int y, int goal_x, int goal_y, wchar_t plan[max_ligne]
     return (wc == L' ' || wc == L'►' || wc == L'◄' || wc == L'S');
 }
 
+// Vérifier si une position est occupée par une autre voiture
+int position_occupee(int x, int y, VEHICULE* liste, VEHICULE* ignore) {
+    VEHICULE* v = liste;
+    while (v) {
+        // Ignorer la voiture qu'on est en train de déplacer
+        if (v != ignore && v->posx == x && v->posy == y) {
+            return 1;  // Position occupée
+        }
+        v = v->NXT;
+    }
+    return 0;  // Position libre
+}
+
 // =======================================
 // Structure pour le chemin pré-calculé
 // =======================================
@@ -364,7 +377,7 @@ Point* astar_simple(int start_x, int start_y, int goal_x, int goal_y,
 // =======================================
 // Déplacer vers la sortie
 // =======================================
-int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne]) {
+int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne], VEHICULE* liste) {
     if (!v) return 0;
 
     // Arrivé à la sortie ?
@@ -378,8 +391,12 @@ int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne]) {
 
     // Si un chemin existe, suivre le premier pas
     if (chemin && longueur_chemin > 0) {
-        v->posx = chemin[0].x;
-        v->posy = chemin[0].y;
+        // Vérifier s'il n'y a pas de collision
+        if (!position_occupee(chemin[0].x, chemin[0].y, liste, v)) {
+            v->posx = chemin[0].x;
+            v->posy = chemin[0].y;
+        }
+        // Sinon, on attend (ne bouge pas ce tick)
         free(chemin);
         return 0;
     }
@@ -419,7 +436,7 @@ int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne]) {
 // =======================================
 
 
-void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][max_colonne]) {
+void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][max_colonne], VEHICULE* liste) {
     if (!v || !target) return;
 
     // Arrivé à destination (place de parking)
@@ -439,8 +456,12 @@ void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][m
 
     // Si un chemin existe, suivre le premier pas
     if (chemin && longueur_chemin > 0) {
-        v->posx = chemin[0].x;
-        v->posy = chemin[0].y;
+        // Vérifier s'il n'y a pas de collision
+        if (!position_occupee(chemin[0].x, chemin[0].y, liste, v)) {
+            v->posx = chemin[0].x;
+            v->posy = chemin[0].y;
+        }
+        // Sinon, on attend (ne bouge pas ce tick)
         free(chemin);
         return;
     }

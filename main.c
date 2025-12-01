@@ -10,6 +10,46 @@
 #include "affichage.h"
 #include "gestion.h"
 
+// Fonction pour afficher le menu et retourner le mode choisi
+int afficher_menu() {
+    clear();
+
+    // Afficher le titre
+    afficher_titre("titre.txt");
+
+    // Position pour le menu (sous le titre)
+    int menu_y = 15;
+    int menu_x = 30;
+
+    // Affichage du menu
+    attron(A_BOLD);
+    mvprintw(menu_y, menu_x, "╔════════════════════════════════════════╗");
+    mvprintw(menu_y + 1, menu_x, "║        SÉLECTIONNEZ UN MODE            ║");
+    mvprintw(menu_y + 2, menu_x, "╠════════════════════════════════════════╣");
+    mvprintw(menu_y + 3, menu_x, "║                                        ║");
+    mvprintw(menu_y + 4, menu_x, "║  [1] Mode Normal                       ║");
+    mvprintw(menu_y + 5, menu_x, "║      (Gestion fluide, 10 voitures max) ║");
+    mvprintw(menu_y + 6, menu_x, "║                                        ║");
+    mvprintw(menu_y + 7, menu_x, "║  [2] Mode Débordé                      ║");
+    mvprintw(menu_y + 8, menu_x, "║      (Parking saturé, file d'attente)  ║");
+    mvprintw(menu_y + 9, menu_x, "║                                        ║");
+    mvprintw(menu_y + 10, menu_x, "║  [Q] Quitter                           ║");
+    mvprintw(menu_y + 11, menu_x, "║                                        ║");
+    mvprintw(menu_y + 12, menu_x, "╚════════════════════════════════════════╝");
+    attroff(A_BOLD);
+
+    refresh();
+
+    // Attendre le choix de l'utilisateur
+    int ch;
+    while (1) {
+        ch = getch();
+        if (ch == '1') return 1;  // Mode normal
+        if (ch == '2') return 2;  // Mode débordé
+        if (ch == 'q' || ch == 'Q') return 0;  // Quitter
+    }
+}
+
 int main() {
     // === Initialisation ===
     srand(time(NULL));  // Initialiser le générateur aléatoire
@@ -22,10 +62,16 @@ int main() {
     init_pair(1, COLOR_GREEN, COLOR_BLACK);
     init_pair(2, COLOR_RED, COLOR_BLACK);
 
+    // Afficher le menu et obtenir le mode
+    int mode = afficher_menu();
+    if (mode == 0) {
+        endwin();
+        return 0;
+    }
+
     wchar_t plan[max_ligne][max_colonne];
     VEHICULE* voitures = NULL;  // Liste chainée des voitures
 
-    /*afficher_titre("titre.txt");*/
     charger_plan("parking.txt", plan);
     trouver_places(plan);
 
@@ -38,22 +84,39 @@ int main() {
         hauteur_plan++;
     }
 
+    // Paramètres selon le mode
+    int max_voitures, min_spawn_ticks, max_spawn_ticks;
+    if (mode == 1) {
+        // Mode Normal
+        max_voitures = 10;
+        min_spawn_ticks = 25;  // 5 secondes
+        max_spawn_ticks = 51;  // 10 secondes
+    } else {
+        // Mode Débordé
+        max_voitures = 30;     // Beaucoup plus de voitures
+        min_spawn_ticks = 5;   // 1 seconde
+        max_spawn_ticks = 16;  // 3 secondes (spawn très rapide)
+    }
+
     // Tableau pour stocker les destinations de chaque voiture
-    PLACE* targets[10] = {NULL};
+    PLACE* targets[30] = {NULL};  // Augmenté pour mode débordé
     int nb_voitures_actives = 0;
     int nb_voitures_creees = 0;
     int nb_voitures_sorties = 0;
-    // Spawn aléatoire entre 5-10 secondes = 25-50 frames (à 200ms/frame)
-    int intervalle_spawn = 25 + rand() % 26;
+    // Spawn aléatoire
+    int intervalle_spawn = min_spawn_ticks + rand() % (max_spawn_ticks - min_spawn_ticks);
     int tick_depuis_spawn = 0;
 
     // Boucle principale de simulation
     for (int t = 0; t < 2000; t++) {
         // Spawn d'une nouvelle voiture périodiquement
         tick_depuis_spawn++;
-        if (tick_depuis_spawn >= intervalle_spawn && nb_voitures_actives < 10) {
+        if (tick_depuis_spawn >= intervalle_spawn && nb_voitures_actives < max_voitures) {
             PLACE* target = trouver_place_libre();
             if (target) {
+                // IMPORTANT : Réserver la place immédiatement
+                target->libre = 0;
+
                 VEHICULE* nouvelle = creer_voiture('v', ENTREE_X, ENTREE_Y);
                 ajouter_voiture(&voitures, nouvelle);
 
@@ -65,7 +128,7 @@ int main() {
                 nb_voitures_creees++;
                 tick_depuis_spawn = 0;
                 // Nouveau intervalle aléatoire pour la prochaine voiture
-                intervalle_spawn = 25 + rand() % 26;
+                intervalle_spawn = min_spawn_ticks + rand() % (max_spawn_ticks - min_spawn_ticks);
             }
         }
 
@@ -82,7 +145,7 @@ int main() {
             // Logique de déplacement
             if (v->en_sortie) {
                 // En route vers la sortie
-                if (deplacer_vers_sortie(v, plan)) {
+                if (deplacer_vers_sortie(v, plan, voitures)) {
                     supprimer = 1;
                 }
             } else if (v->etat == 0 && v->ticks_gare > 0) {
@@ -102,7 +165,7 @@ int main() {
                 }
             } else if (v->etat == 1 && !v->en_sortie) {
                 // En mouvement vers la place
-                if (target) deplacer_voiture_vers(v, target, plan);
+                if (target) deplacer_voiture_vers(v, target, plan, voitures);
             }
 
             // Supprimer la voiture si elle est sortie
@@ -117,10 +180,10 @@ int main() {
                 }
 
                 // Décaler les targets
-                for (int i = idx; i < 9; i++) {
+                for (int i = idx; i < 29; i++) {
                     targets[i] = targets[i + 1];
                 }
-                targets[9] = NULL;
+                targets[29] = NULL;
 
                 free(v);
                 nb_voitures_actives--;
@@ -157,7 +220,11 @@ int main() {
         int ligne_stats = 0;
 
         mvprintw(ligne_stats++, col_stats, "╔══════════════════╗");
-        mvprintw(ligne_stats++, col_stats, "║   STATISTIQUES   ║");
+        if (mode == 1) {
+            mvprintw(ligne_stats++, col_stats, "║  MODE: NORMAL    ║");
+        } else {
+            mvprintw(ligne_stats++, col_stats, "║  MODE: DÉBORDÉ   ║");
+        }
         mvprintw(ligne_stats++, col_stats, "╠══════════════════╣");
         mvprintw(ligne_stats++, col_stats, "║ Act.  : %-3d      ║", count_voitures);
         mvprintw(ligne_stats++, col_stats, "║ Garé  : %-3d      ║", count_garees);
