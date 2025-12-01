@@ -1,5 +1,6 @@
 #ifndef GESTION_H
 #define GESTION_H
+#include <wchar.h>
 
 #define max_ligne 100
 #define max_colonne 200
@@ -10,36 +11,36 @@ struct voiture {
     int posx, posy;
     char type;
     char Carrosserie[4][30];
-    char etat;       // 1 = en mouvement, 0 = garée
-    int ticks_gare;  // nombre de ticks avant départ
-    char en_sortie;  // 0 = vers place, 1 = vers sortie
+    char etat;
+    int ticks_gare;
+    char en_sortie;
+    int argent_du;  // Argent accumulé par cette voiture
     struct voiture *NXT;
 };
 
-// Structure pour représenter une place de parking
 typedef struct {
     int x, y;
-    int libre; // 1 = libre, 0 = occupée
-    int marqueur_x;  // Position X du marqueur
-    int marqueur_y;  // Position Y du marqueur
+    int libre;
 } PLACE;
 
-// Coordonnées entrée/sortie
 #define ENTREE_X 8
-#define ENTREE_Y 107
-#define SORTIE_X 7
-#define SORTIE_Y 1
+#define ENTREE_Y 112
+#define SORTIE_X 6
+#define SORTIE_Y 5  // Dans le couloir de sortie, accessible
 
-// Fonctions voitures
+// Variables globales pour les places
+extern PLACE places[];
+extern int nb_places;
+
+// Variable globale pour l'argent total gagné
+extern int argent_total;
+
 VEHICULE* creer_voiture(char type, int x, int y);
 void ajouter_voiture(VEHICULE** liste, VEHICULE* v);
-
-// Fonctions places
-void trouver_places(char plan[max_ligne][max_colonne]);
+void trouver_places(wchar_t plan[max_ligne][max_colonne]);
 PLACE* trouver_place_libre();
-
-// Déplacement
-void deplacer_voiture_vers(VEHICULE* v, PLACE* target);
+int est_un_espace(int x, int y, wchar_t plan[max_ligne][max_colonne]);
+void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][max_colonne]);
+int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne]);
 
 #endif
-
