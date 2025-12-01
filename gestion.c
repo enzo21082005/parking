@@ -417,6 +417,8 @@ int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne]) {
 // =======================================
 // Déplacement intelligent qui évite les obstacles
 // =======================================
+
+
 void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][max_colonne]) {
     if (!v || !target) return;
 
