@@ -7,46 +7,140 @@
 #include <wchar.h>
 #include <locale.h>
 #include <ncursesw/curses.h>
+#include <signal.h>
+#include <sys/wait.h>
 #include "affichage.h"
 #include "gestion.h"
+
+// Variables globales pour la musique
+pid_t music_pid = -1;
+int music_enabled = 1;  // 1 = activé, 0 = désactivé
+
+// Fonction pour démarrer la musique
+void start_music() {
+    if (music_pid != -1) return;  // Déjà en cours
+
+    music_pid = fork();
+    if (music_pid == 0) {
+        // Processus enfant - jouer la musique en boucle
+        // Rediriger stderr et stdout vers /dev/null pour éviter les messages
+        freopen("/dev/null", "w", stdout);
+        freopen("/dev/null", "w", stderr);
+
+        // Boucle infinie pour rejouer la musique
+        while (1) {
+            // Essayer mpg123 d'abord (pour MP3)
+            execlp("mpg123", "mpg123", "-q", "elevator_music.mp3", NULL);
+            // Si mpg123 échoue, essayer aplay (pour WAV)
+            execlp("aplay", "aplay", "-q", "elevator_music.wav", NULL);
+            // Si les deux échouent, sortir
+            exit(0);
+        }
+    }
+}
+
+// Fonction pour arrêter la musique
+void stop_music() {
+    if (music_pid > 0) {
+        kill(music_pid, SIGTERM);
+        waitpid(music_pid, NULL, 0);
+        music_pid = -1;
+    }
+}
+
+// Fonction pour toggle la musique
+void toggle_music() {
+    music_enabled = !music_enabled;
+    if (music_enabled) {
+        start_music();
+    } else {
+        stop_music();
+    }
+}
 
 // Fonction pour afficher le menu et retourner le mode choisi
 int afficher_menu() {
     clear();
 
-    // Afficher le titre
-    afficher_titre("titre.txt");
+    // Dessiner un fond de parking décoratif
+    attron(COLOR_PAIR(1));
 
-    // Position pour le menu (sous le titre)
+    // Bordure supérieure
+    mvprintw(0, 0, "╔═══════════════════════════════════════════════════════════════════════════════════════════════════╗");
+
+    // Lignes de fond avec motifs de parking
+    for (int i = 1; i < 30; i++) {
+        mvprintw(i, 0, "║");
+        // Motif de places de parking sur les côtés
+        if (i >= 14 && i <= 26 && i % 2 == 0) {
+            mvprintw(i, 3, "■");
+            mvprintw(i, 93, "■");
+        }
+        mvprintw(i,100, "║");
+    }
+
+    // Lignes de route au milieu
+    for (int i = 14; i < 27; i++) {
+        mvprintw(i, 10, "─────");
+        mvprintw(i, 85, "─────");
+    }
+
+    // Bordure inférieure
+    mvprintw(30, 0, "╚═══════════════════════════════════════════════════════════════════════════════════════════════════╝");
+    attroff(COLOR_PAIR(1));
+
+    // Afficher le titre CENTRÉ en haut
+    FILE *f = fopen("titre.txt", "r");
+    if (f) {
+        char ligne[300];
+        int y = 2;
+        while (fgets(ligne, sizeof(ligne), f) && y < 11) {
+            // Calculer la position pour centrer (environ colonne 20 pour un titre de 70 caractères)
+            int x = 15;
+            attron(A_BOLD | COLOR_PAIR(2));
+            mvprintw(y, x, "%s", ligne);
+            attroff(A_BOLD | COLOR_PAIR(2));
+            y++;
+        }
+        fclose(f);
+    }
+
+    // Position pour le menu (centré)
     int menu_y = 15;
     int menu_x = 30;
 
     // Affichage du menu
-    attron(A_BOLD);
-    mvprintw(menu_y, menu_x, "╔════════════════════════════════════════╗");
-    mvprintw(menu_y + 1, menu_x, "║        SÉLECTIONNEZ UN MODE            ║");
-    mvprintw(menu_y + 2, menu_x, "╠════════════════════════════════════════╣");
-    mvprintw(menu_y + 3, menu_x, "║                                        ║");
-    mvprintw(menu_y + 4, menu_x, "║  [1] Mode Normal                       ║");
-    mvprintw(menu_y + 5, menu_x, "║      (Gestion fluide, 10 voitures max) ║");
-    mvprintw(menu_y + 6, menu_x, "║                                        ║");
-    mvprintw(menu_y + 7, menu_x, "║  [2] Mode Débordé                      ║");
-    mvprintw(menu_y + 8, menu_x, "║      (Parking saturé, file d'attente)  ║");
-    mvprintw(menu_y + 9, menu_x, "║                                        ║");
-    mvprintw(menu_y + 10, menu_x, "║  [Q] Quitter                           ║");
-    mvprintw(menu_y + 11, menu_x, "║                                        ║");
-    mvprintw(menu_y + 12, menu_x, "╚════════════════════════════════════════╝");
-    attroff(A_BOLD);
-
-    refresh();
-
-    // Attendre le choix de l'utilisateur
-    int ch;
     while (1) {
-        ch = getch();
+        attron(A_BOLD | COLOR_PAIR(1));
+        mvprintw(menu_y, menu_x, "╔════════════════════════════════════════╗");
+        mvprintw(menu_y + 1, menu_x, "║        SÉLECTIONNEZ UN MODE            ║");
+        mvprintw(menu_y + 2, menu_x, "╠════════════════════════════════════════╣");
+        mvprintw(menu_y + 3, menu_x, "║                                        ║");
+        mvprintw(menu_y + 4, menu_x, "║  [1] Mode Normal                       ║");
+        mvprintw(menu_y + 5, menu_x, "║      (Gestion fluide, 10 voitures max) ║");
+        mvprintw(menu_y + 6, menu_x, "║                                        ║");
+        mvprintw(menu_y + 7, menu_x, "║  [2] Mode Débordé                      ║");
+        mvprintw(menu_y + 8, menu_x, "║      (Parking saturé, file d'attente)  ║");
+        mvprintw(menu_y + 9, menu_x, "║                                        ║");
+        mvprintw(menu_y + 10, menu_x, "║  [M] Musique: %-3s                      ║",
+                 music_enabled ? "ON" : "OFF");
+        mvprintw(menu_y + 11, menu_x, "║  [Q] Quitter                           ║");
+        mvprintw(menu_y + 12, menu_x, "║                                        ║");
+        mvprintw(menu_y + 13, menu_x, "╚════════════════════════════════════════╝");
+        attroff(A_BOLD | COLOR_PAIR(1));
+
+        refresh();
+
+        // Attendre le choix de l'utilisateur
+        int ch = getch();
         if (ch == '1') return 1;  // Mode normal
         if (ch == '2') return 2;  // Mode débordé
-        if (ch == 'q' || ch == 'Q') return 0;  // Quitter
+        if (ch == 'm' || ch == 'M') {
+            toggle_music();
+            // Continuer la boucle pour réafficher le menu avec le nouveau statut
+        } else if (ch == 'q' || ch == 'Q') {
+            return 0;  // Quitter
+        }
     }
 }
 
@@ -62,15 +156,21 @@ int main() {
     init_pair(1, COLOR_GREEN, COLOR_BLACK);
     init_pair(2, COLOR_RED, COLOR_BLACK);
 
-    // Afficher le menu et obtenir le mode
-    int mode = afficher_menu();
-    if (mode == 0) {
-        endwin();
-        return 0;
-    }
+    // Démarrer la musique au lancement
+    start_music();
 
-    wchar_t plan[max_ligne][max_colonne];
-    VEHICULE* voitures = NULL;  // Liste chainée des voitures
+    // Boucle principale pour permettre de retourner au menu
+    while (1) {
+        // Afficher le menu et obtenir le mode
+        int mode = afficher_menu();
+        if (mode == 0) {
+            stop_music();  // Arrêter la musique avant de quitter
+            endwin();
+            return 0;
+        }
+
+        wchar_t plan[max_ligne][max_colonne];
+        VEHICULE* voitures = NULL;  // Liste chainée des voitures
 
     charger_plan("parking.txt", plan);
     trouver_places(plan);
@@ -107,8 +207,22 @@ int main() {
     int intervalle_spawn = min_spawn_ticks + rand() % (max_spawn_ticks - min_spawn_ticks);
     int tick_depuis_spawn = 0;
 
+    // Activer le mode non-bloquant pour getch()
+    nodelay(stdscr, TRUE);
+
+    // Variable pour contrôler le retour au menu
+    int retour_menu = 0;
+
     // Boucle principale de simulation
-    for (int t = 0; t < 2000; t++) {
+    for (int t = 0; t < 2000 && !retour_menu; t++) {
+        // Vérifier les touches appuyées
+        int ch = getch();
+        if (ch == 'm' || ch == 'M') {
+            toggle_music();
+        } else if (ch == 'q' || ch == 'Q' || ch == 27) {  // Q ou Echap (27)
+            retour_menu = 1;
+            break;  // Sortir de la boucle pour retourner au menu
+        }
         // Spawn d'une nouvelle voiture périodiquement
         tick_depuis_spawn++;
         if (tick_depuis_spawn >= intervalle_spawn && nb_voitures_actives < max_voitures) {
@@ -234,6 +348,10 @@ int main() {
         mvprintw(ligne_stats++, col_stats, "║ Spawn : %.1fs     ║",
                  (intervalle_spawn - tick_depuis_spawn) * 0.2);
         mvprintw(ligne_stats++, col_stats, "║ €     : %-4d     ║", argent_total);
+        mvprintw(ligne_stats++, col_stats, "╠══════════════════╣");
+        mvprintw(ligne_stats++, col_stats, "║ Music : %-3s [M]  ║",
+                 music_enabled ? "ON" : "OFF");
+        mvprintw(ligne_stats++, col_stats, "║ Menu  : [Q/ESC]  ║");
         mvprintw(ligne_stats++, col_stats, "╚══════════════════╝");
 
         refresh();
@@ -244,13 +362,23 @@ int main() {
         nanosleep(&ts, NULL);
     }
 
-    // Libérer toutes les voitures restantes
-    while (voitures) {
-        VEHICULE* tmp = voitures;
-        voitures = voitures->NXT;
-        free(tmp);
+        // Libérer toutes les voitures restantes
+        while (voitures) {
+            VEHICULE* tmp = voitures;
+            voitures = voitures->NXT;
+            free(tmp);
+        }
+
+        // Réinitialiser l'argent total pour la prochaine session
+        argent_total = 0;
+
+        // Si on a quitté avec Q/Echap, retourner au menu
+        // Sinon, la boucle while(1) continuera automatiquement
     }
 
+    // Cette partie n'est jamais atteinte car la boucle while(1) est infinie
+    // Le programme se termine uniquement via le menu avec mode == 0
+    stop_music();
     endwin();
     return 0;
 }
