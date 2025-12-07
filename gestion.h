@@ -24,8 +24,8 @@ typedef struct {
     int libre;
 } PLACE;
 
-#define ENTREE_X 5
-#define ENTREE_Y 105
+#define ENTREE_X 7
+#define ENTREE_Y 110
 #define BORNE_X 5
 #define BORNE_Y 6  // Position de la borne de paiement
 #define SORTIE_X 6
