@@ -448,7 +448,9 @@ int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne], VEHI
         int nx = v->posx + dx[i];
         int ny = v->posy + dy[i];
 
-        if (est_un_espace(nx, ny, plan) || (nx == dest_x && ny == dest_y)) {
+        // Vérifier que l'espace est praticable ET non occupé
+        if ((est_un_espace(nx, ny, plan) || (nx == dest_x && ny == dest_y))
+            && !position_occupee(nx, ny, liste, v)) {
             int dist = distance_manhattan(nx, ny, dest_x, dest_y);
             if (dist < meilleure_dist) {
                 meilleure_dist = dist;
@@ -538,7 +540,8 @@ void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][m
             est_valide = est_un_espace(nx, ny, plan);
         }
 
-        if (est_valide) {
+        // Vérifier aussi que la position n'est pas occupée par une autre voiture
+        if (est_valide && !position_occupee(nx, ny, liste, v)) {
             int dist = distance_manhattan(nx, ny, target->x, target->y);
             if (dist < meilleure_dist) {
                 meilleure_dist = dist;
@@ -568,7 +571,7 @@ void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][m
         int nx = v->posx + dx[i];
         int ny = v->posy + dy[i];
 
-        if (est_un_espace(nx, ny, plan)) {
+        if (est_un_espace(nx, ny, plan) && !position_occupee(nx, ny, liste, v)) {
             int old_x = v->posx;
             int old_y = v->posy;
             v->posx = nx;
