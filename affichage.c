@@ -73,9 +73,11 @@ void afficher_plan(wchar_t plan[max_ligne][max_colonne], int lignes) {
             int pair = 0;
             if (wc == L'■') {
                 pair = 2; // Rouge pour les places
+            } else if (wc == L'B') {
+                pair = 3; // Jaune pour la borne (on va créer cette couleur)
             } else if (wc == L'║' || wc == L'═' || wc == L'╔' || wc == L'╗' ||
-                       wc == L'╚' || wc == L'╝' || wc == L'╩' || wc == L'╦' || 
-                       wc == L'╬' || wc == L'►' || wc == L'◄' || wc == L'─' || 
+                       wc == L'╚' || wc == L'╝' || wc == L'╩' || wc == L'╦' ||
+                       wc == L'╬' || wc == L'►' || wc == L'◄' || wc == L'─' ||
                        wc == L'│' || wc == L'█') {
                 pair = 1; // Vert pour la structure
             }
@@ -105,20 +107,40 @@ void afficher_titre(const char *filename) {
 
 
 // =======================================
-// Dessin d'une voiture (NOUVELLE VERSION)
+// Dessin d'une voiture (VERSION AVEC ORIENTATION)
 // =======================================
 void dessiner_voiture(VEHICULE* v) {
     if (!v) return;
-    
+
     // On active la couleur ROUGE (paire 2)
     attron(COLOR_PAIR(2));
-    
-    // On dessine un "O" directement aux coordonnées de la voiture
-    // mvprintw(ligne, colonne, "texte")
-    // v->posy est le N° de colonne (le N° de caractère), 
-    // c'est exactement ce que ncurses attend.
-    mvprintw(v->posx, v->posy, "O");
-    
+
+    // Choix du symbole selon la direction
+    wchar_t symbole;
+    switch(v->direction) {
+        case 'N':  // Nord (haut)
+            symbole = L'▲';
+            break;
+        case 'S':  // Sud (bas)
+            symbole = L'▼';
+            break;
+        case 'E':  // Est (droite)
+            symbole = L'►';
+            break;
+        case 'W':  // Ouest (gauche)
+            symbole = L'◄';
+            break;
+        default:
+            symbole = L'●';  // Par défaut
+            break;
+    }
+
+    // Créer et afficher le caractère wide
+    cchar_t cch;
+    wchar_t wstr[2] = {symbole, L'\0'};
+    setcchar(&cch, wstr, A_BOLD, 2, NULL);
+    mvadd_wch(v->posx, v->posy, &cch);
+
     // On désactive la couleur
     attroff(COLOR_PAIR(2));
 }

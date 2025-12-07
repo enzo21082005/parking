@@ -15,6 +15,7 @@ struct voiture {
     int ticks_gare;
     char en_sortie;
     int argent_du;  // Argent accumulé par cette voiture
+    int ticks_a_borne;  // Temps passé à la borne de paiement
     struct voiture *NXT;
 };
 
@@ -25,8 +26,11 @@ typedef struct {
 
 #define ENTREE_X 8
 #define ENTREE_Y 112
+#define BORNE_X 5
+#define BORNE_Y 6  // Position de la borne de paiement
 #define SORTIE_X 6
-#define SORTIE_Y 5  // Dans le couloir de sortie, accessible
+#define SORTIE_Y 3  // Position de la sortie (le 'S')
+#define TICKS_PAIEMENT 10  // 2 secondes à 200ms/tick
 
 // Variables globales pour les places
 extern PLACE places[];

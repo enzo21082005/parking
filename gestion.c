@@ -23,6 +23,7 @@ VEHICULE* creer_voiture(char type, int x, int y) {
     v->ticks_gare = -1;
     v->en_sortie = 0;
     v->argent_du = 0;  // Initialiser l'argent à 0
+    v->ticks_a_borne = -1;  // -1 = pas encore à la borne
     v->NXT = NULL;
 
     return v;
@@ -87,8 +88,8 @@ int est_un_espace(int x, int y, wchar_t plan[max_ligne][max_colonne]) {
     // DEBUG: Afficher le caractère pour comprendre ce qui bloque
     // fprintf(stderr, "Checking (%d,%d) = '%lc' (code: %d)\n", x, y, wc, (int)wc);
 
-    // Espaces praticables : espaces vides, flèches d'entrée/sortie, et 'S' pour sortie
-    return (wc == L' ' || wc == L'►' || wc == L'◄' || wc == L'S');
+    // Espaces praticables : espaces vides, flèches d'entrée/sortie, 'S' pour sortie, et 'B' pour borne
+    return (wc == L' ' || wc == L'►' || wc == L'◄' || wc == L'S' || wc == L'B');
 }
 
 // Version étendue qui autorise aussi les places de parking
@@ -101,8 +102,8 @@ int est_accessible(int x, int y, int goal_x, int goal_y, wchar_t plan[max_ligne]
     // Si c'est la destination finale, autoriser les places
     if (x == goal_x && y == goal_y && wc == L'■') return 1;
 
-    // Sinon, seulement les espaces vides et sortie
-    return (wc == L' ' || wc == L'►' || wc == L'◄' || wc == L'S');
+    // Sinon, seulement les espaces vides, sortie et borne
+    return (wc == L' ' || wc == L'►' || wc == L'◄' || wc == L'S' || wc == L'B');
 }
 
 // Vérifier si une position est occupée par une autre voiture
@@ -385,36 +386,70 @@ int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne], VEHI
         return 1; // Signal pour supprimer la voiture
     }
 
-    // Calculer le chemin avec BFS vers la sortie
+    // Si à la borne de paiement, attendre 2 secondes
+    if (v->posx == BORNE_X && v->posy == BORNE_Y) {
+        if (v->ticks_a_borne == -1) {
+            // Première arrivée à la borne
+            v->ticks_a_borne = 0;
+            return 0;  // Ne pas bouger ce tick
+        } else if (v->ticks_a_borne < TICKS_PAIEMENT) {
+            // Continuer à attendre
+            v->ticks_a_borne++;
+            return 0;  // Ne pas bouger
+        }
+        // Sinon, le paiement est terminé, continuer vers la sortie
+    }
+
+    // Déterminer la destination : borne si pas encore payé, sinon sortie
+    int dest_x, dest_y;
+    if (v->ticks_a_borne < TICKS_PAIEMENT) {
+        // Pas encore payé, aller à la borne
+        dest_x = BORNE_X;
+        dest_y = BORNE_Y;
+    } else {
+        // Paiement effectué, aller à la sortie
+        dest_x = SORTIE_X;
+        dest_y = SORTIE_Y;
+    }
+
+    // Calculer le chemin avec BFS vers la destination
     int longueur_chemin = 0;
-    Point* chemin = bfs_pathfinding(v->posx, v->posy, SORTIE_X, SORTIE_Y, plan, &longueur_chemin);
+    Point* chemin = bfs_pathfinding(v->posx, v->posy, dest_x, dest_y, plan, &longueur_chemin);
 
     // Si un chemin existe, suivre le premier pas
     if (chemin && longueur_chemin > 0) {
         // Vérifier s'il n'y a pas de collision
         if (!position_occupee(chemin[0].x, chemin[0].y, liste, v)) {
+            int old_x = v->posx;
+            int old_y = v->posy;
             v->posx = chemin[0].x;
             v->posy = chemin[0].y;
+
+            // Mettre à jour la direction selon le mouvement
+            if (chemin[0].x < old_x) v->direction = 'N';      // Haut
+            else if (chemin[0].x > old_x) v->direction = 'S'; // Bas
+            else if (chemin[0].y < old_y) v->direction = 'W'; // Gauche
+            else if (chemin[0].y > old_y) v->direction = 'E'; // Droite
         }
         // Sinon, on attend (ne bouge pas ce tick)
         free(chemin);
         return 0;
     }
 
-    // Fallback : se rapprocher de la sortie
+    // Fallback : se rapprocher de la destination
     int dx[] = {-1, 1, 0, 0};
     int dy[] = {0, 0, -1, 1};
 
     int meilleur_x = v->posx;
     int meilleur_y = v->posy;
-    int meilleure_dist = distance_manhattan(v->posx, v->posy, SORTIE_X, SORTIE_Y);
+    int meilleure_dist = distance_manhattan(v->posx, v->posy, dest_x, dest_y);
 
     for (int i = 0; i < 4; i++) {
         int nx = v->posx + dx[i];
         int ny = v->posy + dy[i];
 
-        if (est_un_espace(nx, ny, plan) || (nx == SORTIE_X && ny == SORTIE_Y)) {
-            int dist = distance_manhattan(nx, ny, SORTIE_X, SORTIE_Y);
+        if (est_un_espace(nx, ny, plan) || (nx == dest_x && ny == dest_y)) {
+            int dist = distance_manhattan(nx, ny, dest_x, dest_y);
             if (dist < meilleure_dist) {
                 meilleure_dist = dist;
                 meilleur_x = nx;
@@ -424,8 +459,16 @@ int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne], VEHI
     }
 
     if (meilleur_x != v->posx || meilleur_y != v->posy) {
+        int old_x = v->posx;
+        int old_y = v->posy;
         v->posx = meilleur_x;
         v->posy = meilleur_y;
+
+        // Mettre à jour la direction selon le mouvement
+        if (meilleur_x < old_x) v->direction = 'N';      // Haut
+        else if (meilleur_x > old_x) v->direction = 'S'; // Bas
+        else if (meilleur_y < old_y) v->direction = 'W'; // Gauche
+        else if (meilleur_y > old_y) v->direction = 'E'; // Droite
     }
 
     return 0;
@@ -458,8 +501,16 @@ void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][m
     if (chemin && longueur_chemin > 0) {
         // Vérifier s'il n'y a pas de collision
         if (!position_occupee(chemin[0].x, chemin[0].y, liste, v)) {
+            int old_x = v->posx;
+            int old_y = v->posy;
             v->posx = chemin[0].x;
             v->posy = chemin[0].y;
+
+            // Mettre à jour la direction selon le mouvement
+            if (chemin[0].x < old_x) v->direction = 'N';      // Haut
+            else if (chemin[0].x > old_x) v->direction = 'S'; // Bas
+            else if (chemin[0].y < old_y) v->direction = 'W'; // Gauche
+            else if (chemin[0].y > old_y) v->direction = 'E'; // Droite
         }
         // Sinon, on attend (ne bouge pas ce tick)
         free(chemin);
@@ -499,8 +550,16 @@ void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][m
 
     // Si on a trouvé une meilleure position, bouger
     if (meilleur_x != v->posx || meilleur_y != v->posy) {
+        int old_x = v->posx;
+        int old_y = v->posy;
         v->posx = meilleur_x;
         v->posy = meilleur_y;
+
+        // Mettre à jour la direction selon le mouvement
+        if (meilleur_x < old_x) v->direction = 'N';      // Haut
+        else if (meilleur_x > old_x) v->direction = 'S'; // Bas
+        else if (meilleur_y < old_y) v->direction = 'W'; // Gauche
+        else if (meilleur_y > old_y) v->direction = 'E'; // Droite
         return;
     }
 
@@ -510,8 +569,16 @@ void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][m
         int ny = v->posy + dy[i];
 
         if (est_un_espace(nx, ny, plan)) {
+            int old_x = v->posx;
+            int old_y = v->posy;
             v->posx = nx;
             v->posy = ny;
+
+            // Mettre à jour la direction selon le mouvement
+            if (nx < old_x) v->direction = 'N';      // Haut
+            else if (nx > old_x) v->direction = 'S'; // Bas
+            else if (ny < old_y) v->direction = 'W'; // Gauche
+            else if (ny > old_y) v->direction = 'E'; // Droite
             return;
         }
     }
