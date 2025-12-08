@@ -14,17 +14,14 @@
 void charger_plan(const char *filename, wchar_t plan[max_ligne][max_colonne]) {
     FILE *f = fopen(filename, "r");
     if (!f) { 
-        perror("Erreur ouverture fichier"); 
+        perror("Erreur ouverture fichier"); // erreur si on ne trouve pas le fichier
         return; 
     }
-
-    // Important : définir le mode wide pour lire des wchar_t
     fwide(f, 1);
 
     int x = 0, y = 0;
     wint_t c;
     
-    // Initialiser toutes les lignes
     for (int i = 0; i < max_ligne; i++) {
         plan[i][0] = L'\0';
     }
@@ -32,7 +29,6 @@ void charger_plan(const char *filename, wchar_t plan[max_ligne][max_colonne]) {
     // Lire caractère par caractère (wide char)
     while ((c = fgetwc(f)) != WEOF && y < max_ligne) {
         if (c == L'\n') {
-            // Fin de ligne : terminer la ligne actuelle
             plan[y][x] = L'\0';
             y++;  // Passer à la ligne suivante
             x = 0; // Remettre la colonne à 0
@@ -55,15 +51,14 @@ void charger_plan(const char *filename, wchar_t plan[max_ligne][max_colonne]) {
 }
 
 // =======================================
-// Affichage du plan (VERSION CORRIGÉE)
+// Affichage du plan
 // =======================================
 void afficher_plan(wchar_t plan[max_ligne][max_colonne], int lignes) {
-    clear(); // Important : effacer l'écran avant d'afficher
+    clear(); //effacer l'écran avant d'afficher
     
     for (int i = 0; i < lignes; i++) {
-        // Vérifier que la ligne n'est pas vide
         if (plan[i][0] == L'\0') {
-            continue; // Sauter les lignes vides
+            continue;
         }
         
         for (int j = 0; plan[i][j] != L'\0' && j < max_colonne; j++) {
@@ -97,37 +92,37 @@ void afficher_titre(const char *filename) {
     if (!f) { perror("Erreur ouverture titre"); return; }
 
     char ligne[300];
-    while (fgets(ligne, sizeof(ligne), f)) {
+    while (fgets(ligne, sizeof(ligne), f)) { // Lecture du fichier
         printw("%s", ligne);
     }
     fclose(f);
     refresh();
-    // Affichage instantané du titre
+    // Affichage du titre
 }
 
 
 // =======================================
-// Dessin d'une voiture (VERSION AVEC ORIENTATION)
+// Dessin d'une voiture
 // =======================================
 void dessiner_voiture(VEHICULE* v) {
     if (!v) return;
 
-    // On active la couleur ROUGE (paire 2)
+    // On active la couleur ROUGE
     attron(COLOR_PAIR(2));
 
     // Choix du symbole selon la direction
     wchar_t symbole;
     switch(v->direction) {
-        case 'N':  // Nord (haut)
+        case 'N':  // Nord 
             symbole = L'▲';
             break;
-        case 'S':  // Sud (bas)
+        case 'S':  // Sud 
             symbole = L'▼';
             break;
-        case 'E':  // Est (droite)
+        case 'E':  // Est 
             symbole = L'►';
             break;
-        case 'W':  // Ouest (gauche)
+        case 'W':  // Ouest 
             symbole = L'◄';
             break;
         default:
@@ -146,12 +141,11 @@ void dessiner_voiture(VEHICULE* v) {
 }
 
 // =======================================
-// Dessin de toutes les voitures (MISE À JOUR)
+// Dessin de toutes les voitures
 // =======================================
 void dessiner_voitures(VEHICULE* liste) {
     VEHICULE* tmp = liste;
     while (tmp) {
-        // La fonction ne prend plus le 'plan' en paramètre
         dessiner_voiture(tmp);
         tmp = tmp->NXT;
     }

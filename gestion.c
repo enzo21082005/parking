@@ -8,27 +8,33 @@
 
 #define NB_PLACES 48
 PLACE places[NB_PLACES];
-int nb_places = 0;
+int nb_places = 0; // nb de places total du parking 
 int argent_total = 0;  // Argent total gagné par le parking
 
+// =======================================
+// Création d'une nouvelle voiture
+// =======================================
 VEHICULE* creer_voiture(char type, int x, int y) {
     VEHICULE* v = malloc(sizeof(VEHICULE));
     if (!v) return NULL;
 
     v->direction = 'N';
-    v->posx = x;
-    v->posy = y;
+    v->posx = x; // donne la pose en x de la voiture
+    v->posy = y; // donne la pose en y de la voiture
     v->type = type;
     v->etat = 1;
     v->ticks_gare = -1;
     v->en_sortie = 0;
     v->argent_du = 0;  // Initialiser l'argent à 0
-    v->ticks_a_borne = -1;  // -1 = pas encore à la borne
+    v->ticks_a_borne = -1;  // permet d'identidier si la voiture est devant la borne
     v->NXT = NULL;
 
     return v;
 }
 
+// =======================================
+// Ajout d'une voiture 
+// =======================================
 void ajouter_voiture(VEHICULE** liste, VEHICULE* v) {
     if (!*liste) *liste = v;
     else {
@@ -38,6 +44,9 @@ void ajouter_voiture(VEHICULE** liste, VEHICULE* v) {
     }
 }
 
+// =======================================
+// Trouve l'emplacement des places de parking
+// =======================================
 void trouver_places(wchar_t plan[max_ligne][max_colonne]) {
     nb_places = 0;
 
@@ -55,6 +64,9 @@ void trouver_places(wchar_t plan[max_ligne][max_colonne]) {
     }
 }
 
+// =======================================
+// Trouve les places libres du parking           
+// =======================================
 PLACE* trouver_place_libre() {
     // Compter les places libres
     int nb_libres = 0;
@@ -79,20 +91,20 @@ PLACE* trouver_place_libre() {
     return NULL;
 }
 
+// =======================================
+// Donne si le caractère est un espace
+// =======================================
 int est_un_espace(int x, int y, wchar_t plan[max_ligne][max_colonne]) {
     if (x < 0 || x >= max_ligne) return 0;
     if (y < 0 || y >= max_colonne) return 0;
 
     wchar_t wc = plan[x][y];
-
-    // DEBUG: Afficher le caractère pour comprendre ce qui bloque
-    // fprintf(stderr, "Checking (%d,%d) = '%lc' (code: %d)\n", x, y, wc, (int)wc);
-
-    // Espaces praticables : espaces vides, flèches d'entrée/sortie, 'S' pour sortie, et 'B' pour borne
     return (wc == L' ' || wc == L'►' || wc == L'◄' || wc == L'S' || wc == L'B');
 }
 
-// Version étendue qui autorise aussi les places de parking
+// =======================================
+// Vérifie si une position est accessible
+// =======================================
 int est_accessible(int x, int y, int goal_x, int goal_y, wchar_t plan[max_ligne][max_colonne]) {
     if (x < 0 || x >= max_ligne) return 0;
     if (y < 0 || y >= max_colonne) return 0;
@@ -106,7 +118,9 @@ int est_accessible(int x, int y, int goal_x, int goal_y, wchar_t plan[max_ligne]
     return (wc == L' ' || wc == L'►' || wc == L'◄' || wc == L'S' || wc == L'B');
 }
 
-// Vérifier si une position est occupée par une autre voiture
+// =======================================
+// Vérifie si une position est occupée par une voiture
+// =======================================
 int position_occupee(int x, int y, VEHICULE* liste, VEHICULE* ignore) {
     VEHICULE* v = liste;
     while (v) {
@@ -135,6 +149,9 @@ typedef struct {
     int parent_x, parent_y;
 } Noeud;
 
+// =======================================
+// Calcul de la distance entre deux points
+// =======================================
 int distance_manhattan(int x1, int y1, int x2, int y2) {
     return abs(x1 - x2) + abs(y1 - y2);
 }
@@ -477,10 +494,8 @@ int deplacer_vers_sortie(VEHICULE* v, wchar_t plan[max_ligne][max_colonne], VEHI
 }
 
 // =======================================
-// Déplacement intelligent qui évite les obstacles
+// Déplace une voiture vers sa place de parking
 // =======================================
-
-
 void deplacer_voiture_vers(VEHICULE* v, PLACE* target, wchar_t plan[max_ligne][max_colonne], VEHICULE* liste) {
     if (!v || !target) return;
 

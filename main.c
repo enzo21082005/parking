@@ -16,7 +16,9 @@
 pid_t music_pid = -1;
 int music_enabled = 1;  // 1 = activé, 0 = désactivé
 
-// Fonction pour démarrer la musique
+// =======================================
+// Démarre la musique de fond en boucle
+// =======================================
 void start_music() {
     if (music_pid != -1) return;  // Déjà en cours
 
@@ -39,7 +41,9 @@ void start_music() {
     }
 }
 
-// Fonction pour arrêter la musique
+// =======================================
+// Arrête la musique de fond
+// =======================================
 void stop_music() {
     if (music_pid > 0) {
         kill(music_pid, SIGTERM);
@@ -48,7 +52,9 @@ void stop_music() {
     }
 }
 
-// Fonction pour toggle la musique
+// =======================================
+// Active ou désactive la musique
+// =======================================
 void toggle_music() {
     music_enabled = !music_enabled;
     if (music_enabled) {
@@ -58,7 +64,9 @@ void toggle_music() {
     }
 }
 
-// Fonction pour afficher le menu et retourner le mode choisi
+// =======================================
+// Affiche le menu principal et retourne le mode choisi
+// =======================================
 int afficher_menu() {
     clear();
 
@@ -144,9 +152,12 @@ int afficher_menu() {
     }
 }
 
+// =======================================
+// Fonction principale - simulation du parking
+// =======================================
 int main() {
-    // === Initialisation ===
-    srand(time(NULL));  // Initialiser le générateur aléatoire
+    // Initialisation de ncurses et des couleurs
+    srand(time(NULL));
     setlocale(LC_ALL, "");
     initscr();
     start_color();
